@@ -67,3 +67,14 @@
 {"timestamp": "2026-03-27T23:19:00.192904", "consumer_lag": 27, "db_latency_sec": 2.0366, "cpu_percent": 31.9, "memory_percent": 84.1}
 {"timestamp": "2026-03-27T23:19:07.137932", "consumer_lag": 0, "db_latency_sec": 1.8719, "cpu_percent": 35.8, "memory_percent": 83.3}
 {"timestamp": "2026-03-27T23:19:14.216311", "consumer_lag": 4, "db_latency_sec": 1.9947, "cpu_percent": 37.0, "memory_percent": 84.3}
+{"timestamp": "2026-03-27T23:19:21.424048", "consumer_lag": 7, "db_latency_sec": 2.1188, "cpu_percent": 52.9, "memory_percent": 83.3}
+{"timestamp": "2026-03-27T23:19:28.256431", "consumer_lag": 11, "db_latency_sec": 1.7624, "cpu_percent": 30.9, "memory_percent": 81.6}
+{"timestamp": "2026-03-27T23:19:35.168809", "consumer_lag": 14, "db_latency_sec": 1.8422, "cpu_percent": 20.6, "memory_percent": 80.4}
+{"timestamp": "2026-03-27T23:19:42.264346", "consumer_lag": 18, "db_latency_sec": 2.026, "cpu_percent": 19.2, "memory_percent": 81.2}
+{"timestamp": "2026-03-27T23:19:49.351069", "consumer_lag": 21, "db_latency_sec": 2.0057, "cpu_percent": 26.2, "memory_percent": 83.5}
+{"timestamp": "2026-03-27T23:19:56.554138", "consumer_lag": 25, "db_latency_sec": 2.1371, "cpu_percent": 21.1, "memory_percent": 81.4}
+{"timestamp": "2026-03-27T23:20:03.920658", "consumer_lag": 29, "db_latency_sec": 2.2912, "cpu_percent": 18.9, "memory_percent": 82.4}
+{"timestamp": "2026-03-27T23:20:10.888358", "consumer_lag": 2, "db_latency_sec": 1.8847, "cpu_percent": 23.3, "memory_percent": 83.6}
+{"timestamp": "2026-03-27T23:20:18.045589", "consumer_lag": 6, "db_latency_sec": 2.0819, "cpu_percent": 21.4, "memory_percent": 82.4}
+{"timestamp": "2026-03-27T23:20:25.044147", "consumer_lag": 9, "db_latency_sec": 1.9158, "cpu_percent": 24.3, "memory_percent": 82.9}
+{"timestamp": "2026-03-27T23:20:32.149565", "consumer_lag": 13, "db_latency_sec": 2.0231, "cpu_percent": 26.0, "memory_percent": 81.5}
