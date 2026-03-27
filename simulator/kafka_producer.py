@@ -3,6 +3,7 @@ import time
 import argparse
 import sys
 import os
+import threading
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -15,6 +16,14 @@ KAFKA_BOOTSTRAP = "localhost:9092"
 def delivery_report(err, msg):
     if err:
         print(f"[ERROR] Kafka delivery failed: {err}")
+
+def _db_write_async(event, iot_payload):
+    """Writes to Databricks in a background thread so it doesn't block Kafka streaming."""
+    try:
+        insert_ehr_event(event)
+        insert_iot_event(iot_payload)
+    except Exception as e:
+        print(f"[DB-ERROR] {e}")
 
 def stream_events(duration_seconds=60, interval=1.0):
     producer = Producer({"bootstrap.servers": KAFKA_BOOTSTRAP})
@@ -47,15 +56,17 @@ def stream_events(duration_seconds=60, interval=1.0):
             value=json.dumps(iot_payload),
             callback=delivery_report
         )
-
         producer.poll(0)
 
-        # 3. Write to Databricks Delta tables
-        insert_ehr_event(event)
-        insert_iot_event(iot_payload)
+        # 3. Write to Databricks in background (non-blocking)
+        t = threading.Thread(
+            target=_db_write_async,
+            args=(event, iot_payload),
+            daemon=True
+        )
+        t.start()
 
         count += 1
-
         if count % 5 == 0:
             elapsed = round(time.time() - start, 1)
             print(f"[INFO] {count} events → Kafka + Databricks ({elapsed}s elapsed)...")
