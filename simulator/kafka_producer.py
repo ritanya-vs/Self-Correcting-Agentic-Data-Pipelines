@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from confluent_kafka import Producer
 from simulator.patient_generator import generate_patient_event
-from simulator.databasegit import get_connection
+from simulator.database import get_connection
 
 KAFKA_BOOTSTRAP = "localhost:9092"
 
