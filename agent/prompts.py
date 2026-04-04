@@ -1,6 +1,5 @@
 from langchain_core.prompts import PromptTemplate
 
-# 1. System Topology & Baselines
 PIPELINE_CONTEXT = """
 SYSTEM TOPOLOGY:
 - Source: Python IoT/EHR Producer
@@ -11,28 +10,47 @@ SYSTEM TOPOLOGY:
 NORMAL BASELINES:
 - Consumer Lag: < 30 messages
 - DB Latency: < 2.5 seconds
-- Expected Schema: 'patient_id', 'heart_rate', 'bp_systolic', 'bp_diastolic', 'spo2', 'temperature_c', 'ward', 'timestamp'
+- Expected Schema: patient_id, heart_rate, bp_systolic, bp_diastolic,
+  spo2, temperature_c, ward, timestamp
 """
 
-# 2. The Chain of Thought (CoT) ReAct Prompt Template
 REACT_COT_TEMPLATE = """
-You are an Autonomous Site Reliability Engineer. You have received a CRISIS PACKET detailing pipeline anomalies.
-You have access to the following tools to investigate and fix the issue:
+You are an Autonomous Site Reliability Engineer for a healthcare data pipeline.
+You must diagnose and fix the fault described in the Crisis Packet below.
 
+=== CRITICAL RULES - NEVER BREAK THESE ===
+1. Action Input must ALWAYS be a plain string.
+2. NEVER use backticks around SQL. WRONG: `ALTER TABLE t` RIGHT: ALTER TABLE t
+3. NEVER use code fences. WRONG: ```sql SELECT 1``` RIGHT: SELECT 1
+4. NEVER add a semicolon at the end of SQL.
+5. Write SQL exactly as shown in examples — plain text only.
+6. Only call ONE tool per Action step.
+7. After each Observation read the result before deciding next step.
+===========================================
+
+You have access to these tools:
 {tools}
 
-Use the following format strictly:
+Use EXACTLY this format and nothing else:
 
-Crisis Packet: the input JSON containing the fault signals
-Evidence: list the specific metrics, schema drifts, or errors found in the packet
-Hypothesis: explain what is fundamentally broken based on the evidence
-Confidence: rate your hypothesis (Low/Medium/High)
-Action: the action to take, should be one of [{tool_names}]
-Action Input: the input to the action (e.g., a SQL query, a bash command, or a tool argument)
-Observation: the result of the action
-... (this Action/Action Input/Observation can repeat N times)
+Crisis Packet: the crisis JSON you received
+Evidence: list every anomaly signal found in the packet
+Hypothesis: what is broken and why
+Confidence: Low / Medium / High
+Action: one tool name from [{tool_names}]
+Action Input: plain string only — NO backticks, NO markdown, NO semicolons
+Observation: the result returned by the tool
+Thought: what does this result mean, is the issue fixed?
+Action: next tool name if another step is needed
+Action Input: plain string only
+Observation: result
 Thought: I now know the issue is resolved.
-Final Answer: A summary of what was diagnosed and exactly what was executed to fix it.
+Final Answer: Full summary — what was diagnosed, what tools were called, what was fixed.
+
+SQL EXAMPLES (copy this exact style):
+  ALTER TABLE healthcare_db.ehr_stream ADD COLUMN spo2 DOUBLE
+  DELETE FROM healthcare_db.ehr_stream WHERE spo2 IS NULL
+  SELECT COUNT(*) FROM healthcare_db.ehr_stream
 
 Context:
 {pipeline_context}
@@ -45,7 +63,7 @@ Thought: {agent_scratchpad}
 
 def get_react_prompt():
     return PromptTemplate(
-        template=REACT_COT_TEMPLATE,
-        input_variables=["tools", "tool_names", "crisis_packet", "agent_scratchpad"],
-        partial_variables={"pipeline_context": PIPELINE_CONTEXT}
+        template          = REACT_COT_TEMPLATE,
+        input_variables   = ["tools", "tool_names", "crisis_packet", "agent_scratchpad"],
+        partial_variables = {"pipeline_context": PIPELINE_CONTEXT}
     )

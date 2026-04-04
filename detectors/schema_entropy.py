@@ -69,7 +69,7 @@ def check_event(event: dict) -> dict:
     best_schema   = "v1" if v1_result["distance"] <= v2_result["distance"] else "v2"
     best_result   = v1_result if best_schema == "v1" else v2_result
 
-    anomaly_detected = best_distance > ENTROPY_THRESHOLD
+    anomaly_detected = bool(best_distance > ENTROPY_THRESHOLD)
 
     return {
         "detector":         "schema_entropy",
@@ -105,7 +105,7 @@ def check_batch(events: list) -> dict:
         "flag_rate":        round(len(flagged) / len(events), 3) if events else 0,
         "missing_fields":   all_missing,
         "extra_fields":     all_extra,
-        "fault_detected":   len(flagged) > 0,
+        "fault_detected":   bool(len(flagged) > 0),
         "fault_type":       "schema" if flagged else None,
     }
 

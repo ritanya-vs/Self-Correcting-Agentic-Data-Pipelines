@@ -1,0 +1,121 @@
+run,fault_type,expected_detector,detectors_fired,detection_correct,remediation_success,mttr_seconds,timestamp
+1,schema,schema_entropy,"['ks_test', 'schema_entropy']",True,True,0.09,2026-04-04T06:29:03.764124+00:00
+2,schema,schema_entropy,['schema_entropy'],True,True,0.09,2026-04-04T06:29:03.855441+00:00
+3,schema,schema_entropy,['schema_entropy'],True,True,0.11,2026-04-04T06:29:03.969452+00:00
+4,schema,schema_entropy,['schema_entropy'],True,True,0.09,2026-04-04T06:29:04.060713+00:00
+5,schema,schema_entropy,['schema_entropy'],True,False,0.1,2026-04-04T06:29:04.163437+00:00
+6,schema,schema_entropy,['schema_entropy'],True,True,0.11,2026-04-04T06:29:04.270257+00:00
+7,schema,schema_entropy,"['ks_test', 'schema_entropy']",True,True,0.09,2026-04-04T06:29:04.359265+00:00
+8,schema,schema_entropy,['schema_entropy'],True,True,0.09,2026-04-04T06:29:04.446636+00:00
+9,schema,schema_entropy,['schema_entropy'],True,True,0.08,2026-04-04T06:29:04.527908+00:00
+10,schema,schema_entropy,['schema_entropy'],True,True,0.09,2026-04-04T06:29:04.614883+00:00
+11,schema,schema_entropy,['schema_entropy'],True,True,0.09,2026-04-04T06:29:04.704449+00:00
+12,schema,schema_entropy,['schema_entropy'],True,True,0.1,2026-04-04T06:29:04.807267+00:00
+13,schema,schema_entropy,['schema_entropy'],True,True,0.11,2026-04-04T06:29:04.920502+00:00
+14,schema,schema_entropy,['schema_entropy'],True,True,0.11,2026-04-04T06:29:05.025766+00:00
+15,schema,schema_entropy,"['ks_test', 'schema_entropy']",True,False,0.09,2026-04-04T06:29:05.111763+00:00
+16,schema,schema_entropy,['schema_entropy'],True,True,0.09,2026-04-04T06:29:05.198328+00:00
+17,schema,schema_entropy,['schema_entropy'],True,False,0.08,2026-04-04T06:29:05.278497+00:00
+18,schema,schema_entropy,['schema_entropy'],True,True,0.08,2026-04-04T06:29:05.359414+00:00
+19,schema,schema_entropy,['schema_entropy'],True,True,0.08,2026-04-04T06:29:05.440437+00:00
+20,schema,schema_entropy,['schema_entropy'],True,True,0.08,2026-04-04T06:29:05.520896+00:00
+21,schema,schema_entropy,"['ks_test', 'schema_entropy']",True,True,0.08,2026-04-04T06:29:05.603863+00:00
+22,schema,schema_entropy,['schema_entropy'],True,True,0.08,2026-04-04T06:29:05.686158+00:00
+23,schema,schema_entropy,['schema_entropy'],True,True,0.08,2026-04-04T06:29:05.770431+00:00
+24,schema,schema_entropy,['schema_entropy'],True,True,0.08,2026-04-04T06:29:05.854837+00:00
+25,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.09,2026-04-04T06:29:05.941540+00:00
+26,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.09,2026-04-04T06:29:06.028512+00:00
+27,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.08,2026-04-04T06:29:06.107297+00:00
+28,data_quality,ks_test,"['zscore', 'ks_test']",True,False,0.08,2026-04-04T06:29:06.185844+00:00
+29,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.08,2026-04-04T06:29:06.265618+00:00
+30,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.08,2026-04-04T06:29:06.348363+00:00
+31,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.09,2026-04-04T06:29:06.434246+00:00
+32,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.08,2026-04-04T06:29:06.519188+00:00
+33,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.09,2026-04-04T06:29:06.604626+00:00
+34,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.09,2026-04-04T06:29:06.696826+00:00
+35,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.09,2026-04-04T06:29:06.789498+00:00
+36,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.08,2026-04-04T06:29:06.872439+00:00
+37,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.09,2026-04-04T06:29:06.964223+00:00
+38,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.08,2026-04-04T06:29:07.043486+00:00
+39,data_quality,ks_test,"['zscore', 'ks_test']",True,False,0.08,2026-04-04T06:29:07.119062+00:00
+40,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.08,2026-04-04T06:29:07.199427+00:00
+41,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.08,2026-04-04T06:29:07.282107+00:00
+42,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.09,2026-04-04T06:29:07.368101+00:00
+43,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.09,2026-04-04T06:29:07.453823+00:00
+44,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.09,2026-04-04T06:29:07.540199+00:00
+45,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.08,2026-04-04T06:29:07.625099+00:00
+46,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.08,2026-04-04T06:29:07.708776+00:00
+47,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.08,2026-04-04T06:29:07.789109+00:00
+48,data_quality,ks_test,"['zscore', 'ks_test']",True,True,0.08,2026-04-04T06:29:07.865852+00:00
+49,performance,zscore,[],False,True,0.08,2026-04-04T06:29:07.942686+00:00
+50,performance,zscore,[],False,True,0.08,2026-04-04T06:29:08.021363+00:00
+51,performance,zscore,[],False,True,0.08,2026-04-04T06:29:08.106156+00:00
+52,performance,zscore,['ks_test'],False,True,0.08,2026-04-04T06:29:08.187449+00:00
+53,performance,zscore,[],False,True,0.08,2026-04-04T06:29:08.270206+00:00
+54,performance,zscore,[],False,True,0.08,2026-04-04T06:29:08.351381+00:00
+55,performance,zscore,[],False,True,0.08,2026-04-04T06:29:08.431366+00:00
+56,performance,zscore,[],False,True,0.09,2026-04-04T06:29:08.516490+00:00
+57,performance,zscore,[],False,True,0.09,2026-04-04T06:29:08.603247+00:00
+58,performance,zscore,[],False,True,0.08,2026-04-04T06:29:08.680542+00:00
+59,performance,zscore,[],False,True,0.08,2026-04-04T06:29:08.756067+00:00
+60,performance,zscore,[],False,True,0.08,2026-04-04T06:29:08.831848+00:00
+61,performance,zscore,[],False,False,0.08,2026-04-04T06:29:08.908581+00:00
+62,performance,zscore,['ks_test'],False,True,0.08,2026-04-04T06:29:08.992163+00:00
+63,performance,zscore,[],False,False,0.08,2026-04-04T06:29:09.076018+00:00
+64,performance,zscore,[],False,True,0.08,2026-04-04T06:29:09.157991+00:00
+65,performance,zscore,[],False,True,0.08,2026-04-04T06:29:09.241417+00:00
+66,performance,zscore,['ks_test'],False,True,0.08,2026-04-04T06:29:09.323405+00:00
+67,performance,zscore,[],False,True,0.09,2026-04-04T06:29:09.411887+00:00
+68,performance,zscore,[],False,True,0.1,2026-04-04T06:29:09.506990+00:00
+69,performance,zscore,[],False,True,0.08,2026-04-04T06:29:09.586983+00:00
+70,performance,zscore,[],False,False,0.11,2026-04-04T06:29:09.700401+00:00
+71,performance,zscore,['ks_test'],False,True,0.09,2026-04-04T06:29:09.789440+00:00
+72,performance,zscore,['ks_test'],False,True,0.09,2026-04-04T06:29:09.875088+00:00
+73,security,zscore,[],False,True,0.09,2026-04-04T06:29:09.962953+00:00
+74,security,zscore,[],False,True,0.13,2026-04-04T06:29:10.088801+00:00
+75,security,zscore,[],False,True,0.15,2026-04-04T06:29:10.237380+00:00
+76,security,zscore,[],False,True,0.12,2026-04-04T06:29:10.354595+00:00
+77,security,zscore,[],False,False,0.09,2026-04-04T06:29:10.444443+00:00
+78,security,zscore,['ks_test'],False,True,0.08,2026-04-04T06:29:10.520988+00:00
+79,security,zscore,['ks_test'],False,True,0.08,2026-04-04T06:29:10.598887+00:00
+80,security,zscore,[],False,True,0.08,2026-04-04T06:29:10.678357+00:00
+81,security,zscore,[],False,False,0.09,2026-04-04T06:29:10.763501+00:00
+82,security,zscore,[],False,True,0.09,2026-04-04T06:29:10.850557+00:00
+83,security,zscore,[],False,True,0.09,2026-04-04T06:29:10.940214+00:00
+84,security,zscore,[],False,True,0.09,2026-04-04T06:29:11.027907+00:00
+85,security,zscore,['ks_test'],False,True,0.09,2026-04-04T06:29:11.121239+00:00
+86,security,zscore,[],False,True,0.09,2026-04-04T06:29:11.210845+00:00
+87,security,zscore,[],False,False,0.08,2026-04-04T06:29:11.291837+00:00
+88,security,zscore,['ks_test'],False,True,0.09,2026-04-04T06:29:11.383368+00:00
+89,security,zscore,[],False,True,0.08,2026-04-04T06:29:11.460421+00:00
+90,security,zscore,[],False,True,0.09,2026-04-04T06:29:11.553647+00:00
+91,security,zscore,[],False,True,0.1,2026-04-04T06:29:11.658428+00:00
+92,security,zscore,['ks_test'],False,False,0.11,2026-04-04T06:29:11.763626+00:00
+93,security,zscore,['ks_test'],False,True,0.11,2026-04-04T06:29:11.874406+00:00
+94,security,zscore,[],False,False,0.12,2026-04-04T06:29:11.994589+00:00
+95,security,zscore,[],False,False,0.11,2026-04-04T06:29:12.103151+00:00
+96,security,zscore,[],False,False,0.13,2026-04-04T06:29:12.230981+00:00
+97,stall,stall,['stall'],True,True,0.05,2026-04-04T06:29:12.279527+00:00
+98,stall,stall,['stall'],True,False,0.05,2026-04-04T06:29:12.326868+00:00
+99,stall,stall,['stall'],True,True,0.05,2026-04-04T06:29:12.375634+00:00
+100,stall,stall,['stall'],True,True,0.05,2026-04-04T06:29:12.427529+00:00
+101,stall,stall,['stall'],True,True,0.05,2026-04-04T06:29:12.475858+00:00
+102,stall,stall,['stall'],True,False,0.04,2026-04-04T06:29:12.520752+00:00
+103,stall,stall,['stall'],True,True,0.05,2026-04-04T06:29:12.568316+00:00
+104,stall,stall,['stall'],True,True,0.05,2026-04-04T06:29:12.618092+00:00
+105,stall,stall,['stall'],True,True,0.05,2026-04-04T06:29:12.669678+00:00
+106,stall,stall,['stall'],True,True,0.05,2026-04-04T06:29:12.715537+00:00
+107,stall,stall,['stall'],True,True,0.04,2026-04-04T06:29:12.757961+00:00
+108,stall,stall,['stall'],True,True,0.04,2026-04-04T06:29:12.801517+00:00
+109,stall,stall,['stall'],True,True,0.04,2026-04-04T06:29:12.845005+00:00
+110,stall,stall,['stall'],True,True,0.04,2026-04-04T06:29:12.886327+00:00
+111,stall,stall,['stall'],True,True,0.04,2026-04-04T06:29:12.930938+00:00
+112,stall,stall,['stall'],True,True,0.05,2026-04-04T06:29:12.977661+00:00
+113,stall,stall,['stall'],True,True,0.04,2026-04-04T06:29:13.020840+00:00
+114,stall,stall,['stall'],True,True,0.04,2026-04-04T06:29:13.064493+00:00
+115,stall,stall,['stall'],True,True,0.04,2026-04-04T06:29:13.104847+00:00
+116,stall,stall,['stall'],True,True,0.04,2026-04-04T06:29:13.144510+00:00
+117,stall,stall,['stall'],True,True,0.04,2026-04-04T06:29:13.184903+00:00
+118,stall,stall,['stall'],True,True,0.04,2026-04-04T06:29:13.223395+00:00
+119,stall,stall,['stall'],True,True,0.04,2026-04-04T06:29:13.262172+00:00
+120,stall,stall,['stall'],True,False,0.04,2026-04-04T06:29:13.300825+00:00

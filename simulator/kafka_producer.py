@@ -38,7 +38,7 @@ class BufferedProducer:
             ehr_values = [
                 (e["event_id"], e["patient_id"], e["ward"], e["heart_rate"], 
                  e["bp_systolic"], e["bp_diastolic"], e["spo2"], 
-                 e["temperature_c"], e["timestamp"], time.strftime('%Y-%m-%d %H:%M:%S'))
+                 e["temperature_c"],e.get("respiratory_rate", None), e["timestamp"], time.strftime('%Y-%m-%d %H:%M:%S'))
                 for e in ehr_batch
             ]
             cursor.executemany("""
