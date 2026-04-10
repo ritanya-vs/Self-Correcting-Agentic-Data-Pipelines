@@ -1,5 +1,6 @@
 from langchain_core.prompts import PromptTemplate
 
+# 1. System Topology & Context
 PIPELINE_CONTEXT = """
 SYSTEM TOPOLOGY:
 - Source: Python IoT/EHR Producer
@@ -8,49 +9,38 @@ SYSTEM TOPOLOGY:
 - Target: Databricks SQL Warehouse (Table: healthcare_db.ehr_stream)
 
 NORMAL BASELINES:
-- Consumer Lag: < 30 messages
-- DB Latency: < 2.5 seconds
-- Expected Schema: patient_id, heart_rate, bp_systolic, bp_diastolic,
-  spo2, temperature_c, ward, timestamp
+- Expected Schema: patient_id, heart_rate, bp_systolic, bp_diastolic, spo2, temperature_c, ward, timestamp
+- Clinical Normal: Heart Rate (60-100), SpO2 (95-100)
 """
 
+# 2. The ReAct Template
+# CRITICAL: ReAct agents REQUIRE {tools}, {tool_names}, and {agent_scratchpad}.
+# Your custom variable {crisis_packet} is included here as an input.
+# We remove semicolons, backticks, and markdown to prevent SQL parsing errors.
 REACT_COT_TEMPLATE = """
-You are an Autonomous Site Reliability Engineer for a healthcare data pipeline.
-You must diagnose and fix the fault described in the Crisis Packet below.
+You are an Autonomous Site Reliability Engineer and Clinical Data Guardian.
+You must diagnose and fix EVERY fault signal described in the Crisis Packet below.
 
-=== CRITICAL RULES - NEVER BREAK THESE ===
-1. Action Input must ALWAYS be a plain string.
-2. NEVER use backticks around SQL. WRONG: `ALTER TABLE t` RIGHT: ALTER TABLE t
-3. NEVER use code fences. WRONG: ```sql SELECT 1``` RIGHT: SELECT 1
-4. NEVER add a semicolon at the end of SQL.
-5. Write SQL exactly as shown in examples — plain text only.
-6. Only call ONE tool per Action step.
-7. After each Observation read the result before deciding next step.
+=== MANDATORY REMEDIATION RULES ===
+1. ADDRESS ALL FAULTS: If the packet contains multiple signals (e.g., Schema AND Z-Score), you MUST call tools to fix BOTH before finishing.
+2. SCHEMA FAULTS: Use 'execute_sql_ddl' to fix structure or 'execute_sql_dml' to clean NULLs/bad records.
+3. CLINICAL FAULTS (Z-Score): If 'zscore' detects impossible vitals, you MUST call 'quarantine_patient' for the affected patient IDs.
+4. FORMAT: Only call ONE tool per Action step. Read the Observation before taking the next step.
+5. SQL: Plain text only. NO backticks, NO markdown, NO semicolons.
 ===========================================
 
-You have access to these tools:
+You have access to the following tools:
 {tools}
 
-Use EXACTLY this format and nothing else:
+Use the following format:
 
-Crisis Packet: the crisis JSON you received
-Evidence: list every anomaly signal found in the packet
-Hypothesis: what is broken and why
-Confidence: Low / Medium / High
-Action: one tool name from [{tool_names}]
-Action Input: plain string only — NO backticks, NO markdown, NO semicolons
-Observation: the result returned by the tool
-Thought: what does this result mean, is the issue fixed?
-Action: next tool name if another step is needed
-Action Input: plain string only
-Observation: result
-Thought: I now know the issue is resolved.
-Final Answer: Full summary — what was diagnosed, what tools were called, what was fixed.
-
-SQL EXAMPLES (copy this exact style):
-  ALTER TABLE healthcare_db.ehr_stream ADD COLUMN spo2 DOUBLE
-  DELETE FROM healthcare_db.ehr_stream WHERE spo2 IS NULL
-  SELECT COUNT(*) FROM healthcare_db.ehr_stream
+Thought: Do I need to use a tool? Yes
+Action: the action to take, should be one of [{tool_names}]
+Action Input: the input to the action
+Observation: the result of the action
+... (this Thought/Action/Action Input/Observation can repeat N times)
+Thought: I now know the final answer
+Final Answer: the final answer to the original input question
 
 Context:
 {pipeline_context}
@@ -62,8 +52,10 @@ Thought: {agent_scratchpad}
 """
 
 def get_react_prompt():
+    # We explicitly define the input_variables that create_react_agent expects.
+    # crisis_packet is included here so it can be passed during agent.invoke().
     return PromptTemplate(
         template          = REACT_COT_TEMPLATE,
-        input_variables   = ["tools", "tool_names", "crisis_packet", "agent_scratchpad"],
+        input_variables   = ["tools", "tool_names", "agent_scratchpad", "crisis_packet"],
         partial_variables = {"pipeline_context": PIPELINE_CONTEXT}
     )
