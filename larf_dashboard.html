@@ -1,0 +1,427 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LARF — Pipeline Monitor</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:#f5f5f0;color:#1a1a18;min-height:100vh}
+  .header{background:#fff;border-bottom:1px solid #e0dfd8;padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
+  .header-left{display:flex;align-items:center;gap:12px}
+  .logo{font-size:22px;font-weight:600;color:#1a1a18;letter-spacing:-0.5px}
+  .logo span{color:#0F6E56}
+  .subtitle{font-size:13px;color:#888780}
+  .status-pill{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;border:1px solid}
+  .status-healthy{background:#EAF3DE;color:#3B6D11;border-color:#97C459}
+  .status-fault{background:#FCEBEB;color:#A32D2D;border-color:#F09595}
+  .status-loading{background:#f1efe8;color:#5F5E5A;border-color:#D3D1C7}
+  .dot{width:8px;height:8px;border-radius:50%}
+  .dot-green{background:#639922}
+  .dot-red{background:#E24B4A;animation:pulse 1.2s infinite}
+  .dot-gray{background:#888780}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+  .main{padding:24px;max-width:1400px;margin:0 auto}
+  
+  /* --- NEW CONTROL PANEL CSS --- */
+  .control-panel {background:#fff; border:0.5px solid #e0dfd8; border-radius:12px; padding:16px 20px; margin-bottom:24px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
+  .btn {padding:8px 16px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; border:none; display:flex; align-items:center; gap:6px; transition:all 0.2s;}
+  .btn:active {transform:scale(0.98);}
+  .btn-blue {background:#0066cc; color:#fff;}
+  .btn-blue:hover {background:#0052a3;}
+  .btn-red {background:#E24B4A; color:#fff;}
+  .btn-red:hover {background:#c93e3d;}
+  .btn-yellow {background:#F5A623; color:#fff;}
+  .btn-yellow:hover {background:#d48e1b;}
+  .btn-green {background:#0F6E56; color:#fff; box-shadow: 0 4px 6px rgba(15, 110, 86, 0.2);}
+  .btn-green:hover {background:#0b5441;}
+  /* ----------------------------- */
+
+  .metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+  .metric-card{background:#fff;border:0.5px solid #e0dfd8;border-radius:12px;padding:16px 20px}
+  .metric-label{font-size:12px;color:#888780;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px}
+  .metric-value{font-size:28px;font-weight:500;color:#1a1a18}
+  .metric-sub{font-size:12px;color:#888780;margin-top:4px}
+  .metric-good{color:#3B6D11}
+  .metric-bad{color:#A32D2D}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+  .card{background:#fff;border:0.5px solid #e0dfd8;border-radius:12px;padding:20px}
+  .card-title{font-size:14px;font-weight:500;color:#1a1a18;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .detector-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:0.5px solid #f1efe8}
+  .detector-row:last-child{border-bottom:none}
+  .detector-name{font-size:13px;color:#444441}
+  .detector-detail{font-size:12px;color:#888780;margin-top:2px}
+  .badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500}
+  .badge-clear{background:#EAF3DE;color:#3B6D11}
+  .badge-fault{background:#FCEBEB;color:#A32D2D}
+  .badge-warn{background:#FAEEDA;color:#854F0B}
+  .badge-loading{background:#f1efe8;color:#888780}
+  .fault-card{background:#FCEBEB;border:1px solid #F09595;border-radius:12px;padding:16px 20px;margin-bottom:12px}
+  .fault-title{font-size:14px;font-weight:500;color:#A32D2D;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .fault-detail{font-size:13px;color:#791F1F}
+  .fault-severity{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;background:#F7C1C1;color:#501313}
+  .table-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+  th{text-align:left;padding:8px 12px;font-size:11px;font-weight:500;color:#888780;text-transform:uppercase;letter-spacing:0.4px;border-bottom:1px solid #e0dfd8;background:#fafaf7}
+  td{padding:9px 12px;border-bottom:0.5px solid #f1efe8;color:#444441;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  tr.anomalous{background:#fff8f8}
+  tr.anomalous td{color:#A32D2D}
+  .refresh-btn{padding:7px 16px;border-radius:8px;border:0.5px solid #D3D1C7;background:#fff;font-size:13px;color:#444441;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .refresh-btn:hover{background:#f5f5f0}
+  .refresh-btn:active{transform:scale(0.98)}
+  .last-updated{font-size:12px;color:#888780}
+  .ooda-track{display:flex;gap:0;margin-bottom:24px}
+  .ooda-step{flex:1;padding:12px 16px;text-align:center;border:0.5px solid #e0dfd8;background:#fff;font-size:12px}
+  .ooda-step:first-child{border-radius:8px 0 0 8px}
+  .ooda-step:last-child{border-radius:0 8px 8px 0}
+  .ooda-label{font-weight:500;font-size:13px;margin-bottom:2px}
+  .ooda-sub{color:#888780;font-size:11px}
+  .ooda-active{background:#E1F5EE;border-color:#5DCAA5}
+  .ooda-active .ooda-label{color:#0F6E56}
+  .ooda-fault{background:#FCEBEB;border-color:#F09595}
+  .ooda-fault .ooda-label{color:#A32D2D}
+  .empty-faults{text-align:center;padding:32px;color:#888780;font-size:14px}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid #D3D1C7;border-top-color:#0F6E56;border-radius:50%;animation:spin 0.7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .api-note{background:#E1F5EE;border:1px solid #5DCAA5;border-radius:8px;padding:12px 16px;font-size:13px;color:#085041;margin-bottom:20px}
+  .auto-badge{background:#E6F1FB;color:#0C447C;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div>
+      <div class="logo">LARF <span>Monitor</span></div>
+      <div class="subtitle">LLM-Based Autonomous Remediation Framework — Healthcare Pipeline</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span class="last-updated" id="lastUpdated">Not yet fetched</span>
+    <div class="status-pill status-loading" id="statusPill">
+      <div class="dot dot-gray" id="statusDot"></div>
+      <span id="statusText">Connecting...</span>
+    </div>
+    <button class="refresh-btn" onclick="fetchData()">
+      <span id="refreshIcon">↻</span> Refresh
+    </button>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="api-note">
+    Connect your FastAPI backend at <strong>http://localhost:8000</strong> — run <code>uvicorn api.main:app --reload --port 8000</code> in your project root. This dashboard polls every 5 seconds automatically. <span class="auto-badge">auto-refresh ON</span>
+  </div>
+
+  <div class="control-panel">
+    <span style="font-size: 13px; font-weight: 500; color: #888780; margin-right: 8px;">Simulation Controls:</span>
+    <button class="btn btn-blue" onclick="triggerAction('start-stream')">▶️ Start Normal Stream</button>
+    <button class="btn btn-red" onclick="triggerAction('inject-fault', {fault_type: 'schema'})">⚠️ Inject Schema Fault</button>
+    <button class="btn btn-yellow" onclick="triggerAction('inject-fault', {fault_type: 'data_quality'})">⚠️ Inject Data Drift</button>
+    <button class="btn btn-green" onclick="triggerAction('trigger-larf')">🧠 Trigger LARF AI</button>
+  </div>
+
+  <div class="ooda-track" id="oodaTrack">
+    <div class="ooda-step" id="stepObserve">
+      <div class="ooda-label">Observe</div>
+      <div class="ooda-sub" id="observeSub">Reading Kafka events</div>
+    </div>
+    <div class="ooda-step" id="stepOrient">
+      <div class="ooda-label">Orient</div>
+      <div class="ooda-sub" id="orientSub">Running detectors</div>
+    </div>
+    <div class="ooda-step" id="stepDecide">
+      <div class="ooda-label">Decide</div>
+      <div class="ooda-sub" id="decideSub">Building crisis packet</div>
+    </div>
+    <div class="ooda-step" id="stepAct">
+      <div class="ooda-label">Act</div>
+      <div class="ooda-sub" id="actSub">Agent remediating</div>
+    </div>
+  </div>
+
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-label">Total events</div>
+      <div class="metric-value" id="mTotal">—</div>
+      <div class="metric-sub" id="mSource">Waiting for data</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Healthy events</div>
+      <div class="metric-value metric-good" id="mHealthy">—</div>
+      <div class="metric-sub" id="mHealthySub">—</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Flagged events</div>
+      <div class="metric-value metric-bad" id="mFlagged">—</div>
+      <div class="metric-sub" id="mFlaggedSub">—</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">DB latency</div>
+      <div class="metric-value" id="mLatency">—</div>
+      <div class="metric-sub" id="mLatencySub">threshold: 3.0s</div>
+    </div>
+  </div>
+
+  <div class="two-col">
+
+    <div class="card">
+      <div class="card-title">
+        Detector status
+      </div>
+      <div id="detectorRows">
+        <div class="detector-row">
+          <div><div class="detector-name">Loading...</div></div>
+          <div><span class="badge badge-loading">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Active faults</div>
+      <div id="faultsList">
+        <div class="empty-faults">Waiting for data...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="margin-bottom:12px">
+      Live event stream
+      <span style="font-size:12px;font-weight:400;color:#888780">(latest 10 events — red rows = anomalous)</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:14%">patient id</th>
+            <th style="width:12%">heart rate</th>
+            <th style="width:10%">spo2</th>
+            <th style="width:12%">bp systolic</th>
+            <th style="width:12%">resp. rate</th>
+            <th style="width:10%">ward</th>
+            <th style="width:30%">timestamp</th>
+          </tr>
+        </thead>
+        <tbody id="eventsTable">
+          <tr><td colspan="7" style="text-align:center;color:#888780;padding:24px">Waiting for data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = 'http://localhost:8000';
+let lastData = null;
+let polling = null;
+
+const DETECTORS = [
+  {key:'zscore',    label:'Z-Score (data quality)',  sub:'Flags impossible vital signs'},
+  {key:'ks_test',   label:'KS-Test (drift)',          sub:'Compares distribution vs baseline'},
+  {key:'schema',    label:'Schema entropy',           sub:'Detects missing or extra fields'},
+  {key:'security',  label:'Security pattern',         sub:'Brute-force / exfiltration'},
+  {key:'latency',   label:'DB latency',               sub:'Databricks query performance'},
+  {key:'connector', label:'Connector health',         sub:'Kafka Connect sink status'},
+];
+
+function setStatus(state, text) {
+  const pill = document.getElementById('statusPill');
+  const dot  = document.getElementById('statusDot');
+  const stxt = document.getElementById('statusText');
+  pill.className = 'status-pill';
+  dot.className  = 'dot';
+  if (state === 'healthy') {
+    pill.classList.add('status-healthy');
+    dot.classList.add('dot-green');
+  } else if (state === 'fault') {
+    pill.classList.add('status-fault');
+    dot.classList.add('dot-red');
+  } else {
+    pill.classList.add('status-loading');
+    dot.classList.add('dot-gray');
+  }
+  stxt.textContent = text;
+}
+
+function updateOODA(data) {
+  const steps = ['stepObserve','stepOrient','stepDecide','stepAct'];
+  steps.forEach(id => {
+    document.getElementById(id).className = 'ooda-step';
+  });
+  document.getElementById('observeSub').textContent = data.total_events + ' events read';
+  document.getElementById('stepObserve').classList.add('ooda-active');
+
+  if (data.faults && data.faults.length > 0) {
+    document.getElementById('orientSub').textContent = data.faults.length + ' fault(s) detected';
+    document.getElementById('stepOrient').classList.add('ooda-fault');
+    document.getElementById('decideSub').textContent = 'Crisis packet built';
+    document.getElementById('stepDecide').classList.add('ooda-fault');
+    document.getElementById('actSub').textContent = 'Agent remediating...';
+    document.getElementById('stepAct').classList.add('ooda-fault');
+  } else {
+    document.getElementById('orientSub').textContent = 'All clear';
+    document.getElementById('stepOrient').classList.add('ooda-active');
+    document.getElementById('decideSub').textContent = 'No action needed';
+    document.getElementById('stepDecide').classList.add('ooda-active');
+    document.getElementById('actSub').textContent = 'Pipeline healthy';
+    document.getElementById('stepAct').classList.add('ooda-active');
+  }
+}
+
+function updateMetrics(data) {
+  const m = data.metrics;
+  document.getElementById('mTotal').textContent    = m.total_events;
+  document.getElementById('mSource').textContent   = 'Source: ' + data.source;
+  document.getElementById('mHealthy').textContent  = m.healthy_events;
+  document.getElementById('mHealthySub').textContent = Math.round(m.healthy_events / m.total_events * 100) + '% of events';
+  document.getElementById('mFlagged').textContent  = m.flagged_events;
+  document.getElementById('mFlaggedSub').textContent = m.fault_count + ' fault type(s) active';
+  const lat = m.db_latency;
+  document.getElementById('mLatency').textContent  = lat > 0 ? lat.toFixed(2) + 's' : '—';
+  const latEl = document.getElementById('mLatency');
+  latEl.className = 'metric-value ' + (lat > 3 ? 'metric-bad' : 'metric-good');
+}
+
+function updateDetectors(data) {
+  const d   = data.detectors;
+  const rows = DETECTORS.map(det => {
+    const info   = d[det.key] || {};
+    const status = info.status || 'CLEAR';
+    const isFault = status === 'FAULT';
+    let detail = det.sub;
+    if (isFault) {
+      if (det.key === 'zscore')    detail = info.flagged + ' events anomalous';
+      if (det.key === 'ks_test')   detail = 'Drift in: ' + (info.drifted || []).join(', ');
+      if (det.key === 'schema')    detail = 'Missing: ' + (info.missing || []).join(', ');
+      if (det.key === 'latency')   detail = info.value ? info.value.toFixed(2) + 's response time' : 'High latency';
+    }
+    return `<div class="detector-row">
+      <div>
+        <div class="detector-name">${det.label}</div>
+        <div class="detector-detail">${detail}</div>
+      </div>
+      <span class="badge ${isFault ? 'badge-fault' : 'badge-clear'}">${isFault ? 'FAULT' : 'CLEAR'}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('detectorRows').innerHTML = rows;
+}
+
+function updateFaults(data) {
+  const el = document.getElementById('faultsList');
+  if (!data.faults || data.faults.length === 0) {
+    el.innerHTML = '<div class="empty-faults">No active faults — pipeline is healthy</div>';
+    return;
+  }
+  el.innerHTML = data.faults.map(f => `
+    <div class="fault-card">
+      <div class="fault-title">
+        ${f.type}
+        <span class="fault-severity">${f.severity}</span>
+      </div>
+      <div class="fault-detail">${f.details}</div>
+      <div style="font-size:11px;color:#A32D2D;margin-top:6px">Detected by: ${f.detector}</div>
+    </div>
+  `).join('');
+}
+
+function updateTable(data) {
+  const tbody = document.getElementById('eventsTable');
+  if (!data.recent_events || data.recent_events.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888780;padding:24px">No events available</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.recent_events.map(e => {
+    const cls = e._anomalous ? 'anomalous' : '';
+    const hr  = e.heart_rate != null ? parseFloat(e.heart_rate).toFixed(1) : '—';
+    const sp  = e.spo2       != null ? parseFloat(e.spo2).toFixed(1)       : '<span style="color:#E24B4A">MISSING</span>';
+    const bp  = e.bp_systolic!= null ? parseFloat(e.bp_systolic).toFixed(1): '—';
+    const rr  = e.respiratory_rate != null ? parseFloat(e.respiratory_rate).toFixed(1) : '—';
+    const ts  = e.timestamp  ? e.timestamp.substring(0, 19).replace('T',' ') : '—';
+    return `<tr class="${cls}">
+      <td>${e.patient_id || '—'}</td>
+      <td>${hr}</td>
+      <td>${sp}</td>
+      <td>${bp}</td>
+      <td>${rr}</td>
+      <td>${e.ward || '—'}</td>
+      <td>${ts}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function fetchData() {
+  document.getElementById('refreshIcon').innerHTML = '<span class="spinner"></span>';
+  try {
+    const res  = await fetch(API + '/api/pipeline-status', {signal: AbortSignal.timeout(8000)});
+    const data = await res.json();
+    lastData   = data;
+
+    const isHealthy = data.status === 'HEALTHY';
+    setStatus(isHealthy ? 'healthy' : 'fault', isHealthy ? 'Healthy' : data.faults.length + ' fault(s)');
+    document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+
+    updateOODA(data);
+    updateMetrics(data);
+    updateDetectors(data);
+    updateFaults(data);
+    updateTable(data);
+
+  } catch(e) {
+    setStatus('loading', 'API offline');
+    document.getElementById('lastUpdated').textContent = 'Cannot reach localhost:8000';
+
+    if (!lastData) {
+      showOfflineState();
+    }
+  } finally {
+    document.getElementById('refreshIcon').textContent = '↻';
+  }
+}
+
+function showOfflineState() {
+  document.getElementById('mTotal').textContent   = '—';
+  document.getElementById('mHealthy').textContent = '—';
+  document.getElementById('mFlagged').textContent = '—';
+  document.getElementById('mLatency').textContent = '—';
+  document.getElementById('mSource').textContent  = 'Backend offline';
+  document.getElementById('detectorRows').innerHTML = '<div style="padding:20px;text-align:center;color:#888780;font-size:13px">Start FastAPI backend to see detector status</div>';
+  document.getElementById('faultsList').innerHTML  = '<div class="empty-faults">Backend not running</div>';
+  document.getElementById('eventsTable').innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888780;padding:24px">Run: uvicorn api.main:app --reload --port 8000</td></tr>';
+}
+
+// --- NEW FUNCTION TO HANDLE BUTTON CLICKS ---
+async function triggerAction(action, bodyData = null) {
+  const url = `${API}/api/action/${action}`;
+  const options = {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  };
+  
+  if (bodyData) {
+    options.body = JSON.stringify(bodyData);
+  }
+
+  try {
+    const response = await fetch(url, options);
+    const result = await response.json();
+    console.log("Action Triggered:", result);
+    
+    // Force a data refresh half a second after clicking to show changes faster
+    setTimeout(fetchData, 500);
+  } catch (error) {
+    console.error("Error triggering action:", error);
+    alert("Failed to connect to API. Is FastAPI running?");
+  }
+}
+
+fetchData();
+polling = setInterval(fetchData, 5000);
+</script>
+
+</body>
+</html>
