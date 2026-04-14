@@ -27,7 +27,7 @@ from detectors.schema_entropy     import check_batch as schema_batch
 
 st.set_page_config(
     page_title="LARF Pipeline Monitor",
-    page_icon="🚨",
+    page_icon="",
     layout="wide"
 )
 
@@ -122,6 +122,8 @@ def run_detectors(events):
         return {}
         
     # CRITICAL FIX: The "None" Cleanser
+    # Detectors crash if they try to do math on a NULL database value.
+    # We strip out the None values so the detectors treat them as safely "missing".
     clean_events = []
     for e in events:
         clean_e = {k: v for k, v in e.items() if v is not None}
@@ -141,8 +143,10 @@ def run_fault_in_background(fault_fn, *args):
 def consume_latest_kafka_events(n=100):
     """
     Reads the last N events using offset seeking.
+    N=100 ensures security fault (50 events) is always captured.
     """
     from confluent_kafka import Consumer, TopicPartition
+
     try:
         probe = Consumer({
             "bootstrap.servers": "localhost:9092",
@@ -190,15 +194,30 @@ def consume_latest_kafka_events(n=100):
         return []
 
 def run_orchestrator_and_capture_log():
+    # Get the absolute path of the dashboard file itself
     dashboard_file = os.path.abspath(__file__)
+    
+    # dashboard is at: LARF-Pipeline/dashboard/app.py  (or LARF-Pipeline/dashboard.py)
+    # agent is at:     LARF-Pipeline/agent/orchestrator.py
+    
+    # So project root = parent of dashboard file's folder
     dashboard_dir = os.path.dirname(dashboard_file)
     
+    # Check if dashboard is inside a subfolder (dashboard/app.py)
+    # or directly in project root (dashboard.py)
     if os.path.basename(dashboard_dir) == "dashboard":
+        # dashboard/app.py → go up one level to project root
         project_root = os.path.dirname(dashboard_dir)
     else:
+        # dashboard.py → already at project root
         project_root = dashboard_dir
 
     orchestrator = os.path.join(project_root, "agent", "orchestrator.py")
+
+    # Debug — print paths so you can verify
+    print(f"[DASHBOARD] project_root: {project_root}")
+    print(f"[DASHBOARD] orchestrator: {orchestrator}")
+    print(f"[DASHBOARD] exists: {os.path.exists(orchestrator)}")
 
     if not os.path.exists(orchestrator):
         return f"[ERROR] orchestrator.py not found at: {orchestrator}"
@@ -343,6 +362,7 @@ with c4:
         with st.spinner("Injecting security fault..."):
             run_fault_in_background(inject_security_fault, 50)
             time.sleep(6)
+            # Read 150 to make sure all 50 attacker events are captured
             events = fetch_db_events(100)
             st.session_state.events           = events
             st.session_state.pipeline_state   = "fault"
@@ -353,20 +373,28 @@ with c4:
 
 with c5:
     if st.button("Performance", use_container_width=True):
-        with st.spinner("Simulating system latency spike..."):
-            # We don't need a background thread for this, just set the UI state
-            time.sleep(1)
+        with st.spinner("Injecting performance fault..."):
+            run_fault_in_background(inject_performance_fault, 20)
+            time.sleep(5)
+            events = fetch_db_events(100)
+            st.session_state.events           = events
             st.session_state.pipeline_state   = "fault"
             st.session_state.fault_type       = "performance"
             st.session_state.agent_log        = []
+            st.session_state.detector_results = run_detectors(events)
         st.rerun()
 
 with c6:
-    if st.button("Run Orchestrator", use_container_width=True, type="primary"):
+    if st.button(
+        "Run Orchestrator",
+        use_container_width=True,
+        type="primary",
+    ):
         st.session_state.pipeline_state = "fixing"
         st.rerun()
 
 with c7:
+    # Auto-refresh toggle
     auto_label = "Auto ON" if st.session_state.auto_refresh else "Auto OFF"
     if st.button(auto_label, use_container_width=True):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
@@ -389,65 +417,27 @@ with c8:
 if st.session_state.pipeline_state == "fixing":
     st.divider()
     st.markdown("### Agent running — orchestrator.py")
-    with st.spinner("Running agent remediation..."):
+    with st.spinner("Running orchestrator.py --mode once..."):
         try:
-            if st.session_state.fault_type == "performance":
-                # BYPASS: Instantly inject the fake metrics directly into the Agent
-                import io
-                import sys
-                import os
-                from contextlib import redirect_stdout
-                
-                # ─── THE ULTIMATE PATH FIX ───
-                # Force Python to recognize the main project folder
-                project_root = os.path.abspath(os.path.dirname(__file__))
-                if project_root not in sys.path:
-                    sys.path.insert(0, project_root)
-                # ─────────────────────────────
-        
-                from agent.react_agent import LARFReActAgent
-                
-                agent = LARFReActAgent()
-                packet = {
-                    "crisis_id": f"CRISIS-PERF-{int(time.time())}",
-                    "fault_signals": [{
-                        "detector": "databricks_warehouse_monitor",
-                        "issue": "CRITICAL LATENCY SPIKE",
-                        "current_latency_ms": 2850,
-                        "threshold_ms": 1000,
-                        "recommendation": "scaling_required"
-                    }]
-                }
-                
-                f = io.StringIO()
-                with redirect_stdout(f):
-                    agent.resolve_crisis(packet)
-                
-                raw_output = f.getvalue()
-                clean_output = strip_ansi(raw_output)
-                st.session_state.agent_log = clean_output.split("\n")
-                
-                time.sleep(1)
-                st.session_state.pipeline_state = "fixed"
-                st.session_state.fault_type = None
+            raw_output = run_orchestrator_and_capture_log()
+            clean_output = strip_ansi(raw_output)
+            st.session_state.agent_log = clean_output.split("\n")
 
+            if "SUCCESS" in raw_output or "Final Answer" in raw_output:
+                time.sleep(2)
+                clean_events = fetch_db_events(100)
+                st.session_state.events           = clean_events
+                st.session_state.detector_results = run_detectors(clean_events)
+                st.session_state.fault_type       = None
+                st.session_state.pipeline_state   = "fixed"
             else:
-                raw_output = run_orchestrator_and_capture_log()
-                clean_output = strip_ansi(raw_output)
-                st.session_state.agent_log = clean_output.split("\n")
-
-                if "SUCCESS" in raw_output or "Final Answer" in raw_output:
-                    time.sleep(2)
-                    clean_events = fetch_db_events(100)
-                    st.session_state.events           = clean_events
-                    st.session_state.detector_results = run_detectors(clean_events)
-                    st.session_state.fault_type       = None
-                    st.session_state.pipeline_state   = "fixed"
-                else:
-                    events = fetch_db_events(100)
-                    st.session_state.events           = events
-                    st.session_state.detector_results = run_detectors(events)
-                    st.session_state.pipeline_state   = "fault"
+                events = fetch_db_events(100)
+                st.session_state.events           = events
+                st.session_state.detector_results = run_detectors(events)
+                st.session_state.pipeline_state   = "fault"
+        except subprocess.TimeoutExpired:
+            st.session_state.agent_log        = ["[ERROR] Orchestrator timed out after 300s"]
+            st.session_state.pipeline_state   = "fault"
         except Exception as e:
             st.session_state.agent_log        = [f"[ERROR] {e}"]
             st.session_state.pipeline_state   = "fault"
@@ -554,6 +544,7 @@ with left:
                 styles.append("background-color:#fff8f8")
         return styles
 
+    # Table height scales with number of events
     table_height = min(600, max(300, total * 35))
     st.dataframe(
         display_df.style.apply(highlight, axis=1),
@@ -621,7 +612,7 @@ with right:
 Missing fields: <code>{missing}</code><br>
 Extra fields: <code>{extra}</code><br>
 Events affected: {sc.get('flagged_events',0)}/{total}<br>
-Fix: Impute missing spo2 with stochastic dynamic mean<br>
+Fix: Impute missing spo2 with baseline mean 97.6<br>
 Reason: Patient records must be preserved (HIPAA)
 </div>
 """, unsafe_allow_html=True)
@@ -638,7 +629,19 @@ Reason: Patient records must be preserved (HIPAA)
 Max heart rate: <code>{max_hr:.0f} BPM</code> (normal: 60-100)<br>
 Min SpO2: <code>{min_sp:.0f}%</code> (normal: 95-100)<br>
 KS-Test p-value: 0.000<br>
-Fix: Impute impossible records with dynamic jitter to preserve variance
+Fix: Delete impossible records — cannot be safely imputed
+</div>
+""", unsafe_allow_html=True)
+
+        elif fault_type == "security":
+            pct = round(attacker / total * 100) if total else 0
+            st.markdown(f"""
+<div class="fault-box">
+<b>Security Fault — check_security_pattern()</b><br>
+Attacker ID: <code>PT-ATTACKER-0000</code><br>
+Events: <code>{attacker}/{total} ({pct}%)</code><br>
+Threshold exceeded: 20%<br>
+Fix: Quarantine — delete attacker records (confirmed malicious)
 </div>
 """, unsafe_allow_html=True)
 
@@ -647,8 +650,7 @@ Fix: Impute impossible records with dynamic jitter to preserve variance
 <div class="fault-box">
 <b>Performance Fault — check_db_latency()</b><br>
 Heavy Cartesian join choking Databricks warehouse<br>
-Current Latency: 2850ms (Threshold: 1000ms)<br>
-Fix: Agent alerting SRE team via Webhook
+Fix: Cancel query, scale warehouse
 </div>
 """, unsafe_allow_html=True)
 
@@ -657,6 +659,7 @@ Fix: Agent alerting SRE team via Webhook
         st.markdown("#### orchestrator.py output")
         st.caption("Actual terminal output — scrollable")
 
+        # Clean and color-code the log
         log_lines = []
         for line in st.session_state.agent_log:
             line = line.strip()
@@ -681,6 +684,7 @@ Fix: Agent alerting SRE team via Webhook
 
         log_text = "\n".join(log_lines)
 
+        # Scrollable div using HTML component
         st.components.v1.html(
             f"""
             <div style="
@@ -698,6 +702,7 @@ Fix: Agent alerting SRE team via Webhook
                 line-height: 1.5;
             ">{log_text}</div>
             <script>
+                // Auto-scroll to bottom
                 var div = document.querySelector('div');
                 if(div) div.scrollTop = div.scrollHeight;
             </script>
