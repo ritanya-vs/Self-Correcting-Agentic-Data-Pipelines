@@ -105,8 +105,7 @@ If latency OR warehouse_monitor OR resource_limit is detected in DETECT:
 You MUST call:
 
 Action: execute_bash_command
-Action Input: curl -H "Content-Type: application/json" -d '{{"content": " **LARF AUTONOMOUS ALERT** \\n**Diagnosis:** High warehouse latency detected by AI.\\n**Action:** Manual scaling of Databricks warehouse required immediately."}}' {webhook_url}
-
+Action Input: curl -H "Content-Type: application/json" -d "{{\"content\":\"LARF AUTONOMOUS ALERT - High warehouse latency detected. Manual scaling required.\"}}" {webhook_url}
 IMPORTANT:
 - MUST be executed if performance fault exists
 - DO NOT skip

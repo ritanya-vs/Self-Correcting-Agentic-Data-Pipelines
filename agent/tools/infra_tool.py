@@ -27,7 +27,7 @@ def execute_bash_command(command: str) -> str:
         )
         if result.returncode == 0:
             output = result.stdout.strip()
-            return f"SUCCESS: Command executed. Output: {output}"
+            return f"SUCCESS: Command executed."
         else:
             error_msg = (f"FAILED: Exit code {result.returncode}. "
                         f"Error: {result.stderr.strip()}")
