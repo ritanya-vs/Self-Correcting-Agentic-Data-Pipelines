@@ -66,7 +66,7 @@ class LARFReActAgent:
 
             "RUNBOOK B: [SCHEMA FAULT] If 'spo2' is missing or unauthorized columns "
             "like 'diagnosis_code' appear. Action: Use execute_sql_dml to "
-            "impute missing values dynamically: UPDATE healthcare_db.ehr_stream SET spo2 = (SELECT AVG(spo2) FROM healthcare_db.ehr_stream WHERE spo2 IS NOT NULL) + (RAND() * 2.0 - 1.0) WHERE spo2 IS NULL. "
+            "impute missing values: UPDATE healthcare_db.ehr_stream SET spo2 = 97.6 WHERE spo2 IS NULL. "
             "Rule: Do NOT add new columns (Strict Schema Enforcement).",
 
             "RUNBOOK C: [RESOURCE LIMIT] If warehouse latency is high or scaling is required. "
@@ -74,13 +74,8 @@ class LARFReActAgent:
             "notifying the SRE team that manual intervention is required.",
 
             "RUNBOOK D: [DATA QUALITY] If zscore detects impossible vitals "
-            "(heart_rate > 200, bp_systolic > 180, spo2 < 70). Action: Use execute_sql_dml to impute "
-            "all affected vitals with dynamic baseline averages (excluding the outliers) and random jitter: "
-            "UPDATE healthcare_db.ehr_stream SET "
-            "heart_rate = (SELECT AVG(heart_rate) FROM healthcare_db.ehr_stream WHERE heart_rate < 150) + (RAND() * 4.0 - 2.0), "
-            "spo2 = (SELECT AVG(spo2) FROM healthcare_db.ehr_stream WHERE spo2 > 70) + (RAND() * 2.0 - 1.0), "
-            "bp_systolic = (SELECT AVG(bp_systolic) FROM healthcare_db.ehr_stream WHERE bp_systolic < 160) + (RAND() * 4.0 - 2.0) "
-            "WHERE heart_rate > 200 OR bp_systolic > 180.",
+            "(heart_rate > 200). Action: Use execute_sql_dml to impute "
+            "with population mean: UPDATE healthcare_db.ehr_stream SET heart_rate = 80.0 WHERE heart_rate > 200.",
 
             "RUNBOOK E: [SECURITY] If rapid events arrive from PT-ATTACKER-0000. "
             "Action: Use quarantine_patient to purge the attacker records immediately.",

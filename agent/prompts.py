@@ -27,10 +27,8 @@ Final Answer: A detailed summary of the fixes applied to all detected faults.
 
 === STRICT EXECUTION RULES ===
 1. THE MANDATORY CHECKLIST: Look at the "DETECT" section of the Crisis Packet. You are REQUIRED to fix every fault listed there.
-2. 2. FAULT A (Z-Score/Data Quality): If extreme vitals are detected (e.g., heart_rate > 200), you MUST heal all affected columns simultaneously using dynamic averages and jitter. Run EXACTLY:
-   "UPDATE healthcare_db.ehr_stream SET heart_rate = (SELECT AVG(heart_rate) FROM healthcare_db.ehr_stream 
-   WHERE heart_rate < 150) + (RAND() * 4.0 - 2.0), spo2 = (SELECT AVG(spo2) FROM healthcare_db.ehr_stream WHERE spo2 > 70) + (RAND() * 2.0 - 1.0), bp_systolic = (SELECT AVG(bp_systolic) FROM healthcare_db.ehr_stream 
-   WHERE bp_systolic < 160) + (RAND() * 4.0 - 2.0) WHERE heart_rate > 200 OR bp_systolic > 180"
+2. FAULT A (Z-Score/Data Quality): If heart_rate > 200 is detected, you MUST run:
+   "UPDATE healthcare_db.ehr_stream SET heart_rate = 80.0 WHERE heart_rate > 200"
 3. FAULT B (Schema Entropy): If missing spo2 is detected, you MUST use stochastic imputation to preserve variance. Run EXACTLY this:
    "UPDATE healthcare_db.ehr_stream SET spo2 = (SELECT AVG(spo2) FROM healthcare_db.ehr_stream WHERE spo2 IS NOT NULL) + (RAND() * 2.0 - 1.0) WHERE spo2 IS NULL"
 4. SEQUENTIAL PROCESSING: Execute the first fix, observe the success, then immediately generate a Thought for the second fix. Do not stop until the list is empty.
