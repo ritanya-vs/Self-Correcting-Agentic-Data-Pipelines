@@ -1,6 +1,13 @@
 import os
 import json
+import sys
 from dotenv import load_dotenv
+
+_current_dir = os.path.dirname(os.path.abspath(__file__))
+_project_root = os.path.abspath(os.path.join(_current_dir, ".."))
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
+
 from langchain_ollama import ChatOllama
 from langchain_classic.agents import AgentExecutor, create_react_agent
 from langchain_community.vectorstores import Chroma
@@ -73,9 +80,13 @@ class LARFReActAgent:
             "Action: Use execute_bash_command to send a Discord Webhook alert "
             "notifying the SRE team that manual intervention is required.",
 
-            "RUNBOOK D: [DATA QUALITY] If zscore detects impossible vitals "
-            "(heart_rate > 200). Action: Use execute_sql_dml to impute "
-            "with population mean: UPDATE healthcare_db.ehr_stream SET heart_rate = 80.0 WHERE heart_rate > 200.",
+            "RUNBOOK D: [DATA QUALITY - VITALS] If zscore detects impossible vitals "
+            "(heart_rate > 200 OR bp_systolic > 180), Action: Use execute_sql_dml to impute "
+            "with safe baseline values: "
+            "UPDATE healthcare_db.ehr_stream SET "
+            "heart_rate = 80.0, "
+            "bp_systolic = 120.0 "
+            "WHERE heart_rate > 200 OR bp_systolic > 180.",
 
             "RUNBOOK E: [SECURITY] If rapid events arrive from PT-ATTACKER-0000. "
             "Action: Use quarantine_patient to purge the attacker records immediately.",
@@ -95,9 +106,29 @@ class LARFReActAgent:
         # RAG — retrieve relevant runbooks
         print("[AGENT] Searching runbooks for similar past incidents...")
         # We pass the fault signals to the retriever to find the best-matching runbooks
-        context_docs    = self.retriever.invoke(str(crisis_packet['fault_signals']))
+        context_docs = self.retriever.invoke(json.dumps(crisis_packet['fault_signals'], indent=2))
         runbook_context = "\n".join([doc.page_content for doc in context_docs])
         print(f"[AGENT] Found Runbook:\n{runbook_context}\n")
+
+        # ─── DYNAMIC TERMINATION LOGIC ───
+        # We look at exactly what triggered the alarm and set a strict completion goal
+        goals = []
+        for signal in crisis_packet.get('fault_signals', []):
+            det = signal.get("detector", "")
+            if "schema_entropy" in det:
+                goals.append("spo2 NULLs are fixed")
+            elif "zscore" in det or "ks_test" in det:
+                goals.append("heart_rate/BP outliers are imputed")
+            elif "warehouse_monitor" in det or "latency" in det.lower():
+                goals.append("the Discord webhook is successfully fired")
+            elif "security" in det:
+                goals.append("attacker records are completely purged")
+        
+        # Fallback just in case
+        if not goals:
+            goals.append("all signals are resolved")
+            
+        dynamic_stop_condition = " AND ".join(goals)
 
         # ─── UPDATED PROMPT CONSTRUCTION ───
         # We wrap the JSON in a "Checklist" instruction so the AI knows it's a multi-step job
@@ -105,10 +136,15 @@ class LARFReActAgent:
             f"=== MANDATORY SRE CHECKLIST ===\n"
             f"1. ANALYZE DETECTIONS: {json.dumps(crisis_packet.get('fault_signals'), indent=2)}\n"
             f"2. REFERENCE RUNBOOKS:\n{runbook_context}\n\n"
-            f"INSTRUCTION: You must address EVERY signal found in Step 1. "
-            f"Once a tool returns SUCCESS, check the list again for the next fault. "
-            f"Do not stop until heart_rate outliers are imputed AND spo2 NULLs are fixed."
-        )
+            f"INSTRUCTION: You must address EVERY signal found in Step 1.\n"
+            f"If a SECURITY fault is present (PT-ATTACKER-0000), you MUST call quarantine_patient FIRST.\n"
+            f"Once a tool returns SUCCESS, re-check remaining faults.\n"
+            f"Do not stop until {dynamic_stop_condition}.\n"
+            f"- heart_rate > 200 fixed\n"
+            f"- bp_systolic > 180 fixed\n"
+            f"- spo2 < 70 fixed\n"
+            f"- spo2 NULL values fixed\n"
+            f"- PT-ATTACKER-0000 removed if present\n"        )
 
         # Run the ReAct loop
         try:
@@ -125,7 +161,8 @@ if __name__ == "__main__":
         "crisis_id": "CRISIS-TEST-001",
         "fault_signals": [
             {"detector": "schema_entropy", "missing_fields": ["spo2"],
-             "extra_fields": ["diagnosis_code"]}
+             "extra_fields": ["diagnosis_code"]},
+             {"detector": "latency_monitor", "latency_ms": 2500}
         ],
     }
     agent = LARFReActAgent()
