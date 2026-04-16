@@ -75,7 +75,8 @@ def consume_events(topic="ehr-stream", n=50, timeout_seconds=30) -> list:
     # Debug — show how many look like fault events
     fault_count = sum(1 for e in events if "spo2" not in e
                       or "diagnosis_code" in e
-                      or float(e.get("heart_rate", 80)) > 200)
+                      or float(e.get("heart_rate", 80)) > 200
+                      or e.get("patient_id") == "PT-ATTACKER-0000")
     print(f"[ORCHESTRATOR] ~{fault_count} events look anomalous")
 
     return events
@@ -133,6 +134,18 @@ def run_detectors(events: list) -> list:
             "flagged_events": schema_result["flagged_events"],
             "missing_fields": schema_result["missing_fields"],
             "extra_fields":   schema_result["extra_fields"],
+        })
+
+    # 4. SECURITY detector
+    attacker_events = [e for e in events if e.get("patient_id") == "PT-ATTACKER-0000"]
+
+    if len(attacker_events) > 5:   # threshold (you can tune this)
+        print(f"[DETECT] SECURITY breach — {len(attacker_events)} attacker events detected")
+        alerts.append({
+            "detector": "security",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "attacker_id": "PT-ATTACKER-0000",
+            "event_count": len(attacker_events)
         })
 
     if not alerts:

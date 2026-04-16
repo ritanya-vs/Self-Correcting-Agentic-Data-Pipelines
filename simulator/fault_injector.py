@@ -144,10 +144,12 @@ def inject_performance_fault(duration_seconds=30):
 def inject_security_fault(n_events=50):
     print(f"[FAULT] SECURITY — sending {n_events} rapid events from same patient ID...")
     attacker_id = "PT-ATTACKER-0000"
+    con = get_connection()
     for _ in range(n_events):
         event = generate_patient_event()
         event["patient_id"] = attacker_id
         _send("ehr-stream", event)
+        write_fault_to_db(con, event)
         time.sleep(0.05)   # very fast — 50 events in ~2.5 seconds
     producer.flush()
     print("[FAULT] Security fault done.")

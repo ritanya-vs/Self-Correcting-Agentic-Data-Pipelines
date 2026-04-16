@@ -373,7 +373,7 @@ with c8:
 # ── Run orchestrator ──────────────────────────────────────────────
 if st.session_state.pipeline_state == "fixing":
     st.divider()
-    st.markdown("### Agent running — orchestrator.py")
+    st.markdown("### Agent running — orchestrator")
     with st.spinner("Running agent remediation..."):
         try:
             if st.session_state.fault_type == "performance":
@@ -493,7 +493,7 @@ st.divider()
 left, right = st.columns([3, 2])
 
 with left:
-    st.markdown(f"#### Live Kafka event stream — {total} events")
+    st.markdown(f"#### Live event stream — {total} events")
     fault_type = st.session_state.fault_type
 
     known_fields = {
@@ -538,8 +538,8 @@ with left:
     display_df      = df.drop(columns=["_anomalous"])
 
     def highlight(row):
-        if not anomalous_flags[row.name]:
-            return [""] * len(row)
+        # if not anomalous_flags[row.name]:
+        #     return [""] * len(row)
         styles = []
         for col in display_df.columns:
             val = row[col]
@@ -562,8 +562,17 @@ with left:
         return styles
 
     table_height = min(600, max(300, total * 35))
+    def highlight_cell(val, col):
+        if col == "spo2" and str(val) == "MISSING":
+            return "background-color:#f8d7da;color:#721c24;font-weight:600"
+        return ""
+
+    styled_df = display_df.style.applymap(
+        lambda v: highlight_cell(v, "spo2")
+    )
+
     st.dataframe(
-        display_df.style.apply(highlight, axis=1),
+        styled_df,
         use_container_width=True,
         height=table_height,
     )
@@ -590,23 +599,23 @@ with left:
         st.plotly_chart(fig, use_container_width=True)
 
 with right:
-    st.markdown("#### Sprint 2 detectors — live results")
-    st.caption("zscore_detector.py | ks_test.py | schema_entropy.py")
+    st.markdown("#### Detectors — live results")
+    st.caption("zscore_detector | ks_test | schema_entropy")
 
     z  = results.get("zscore", {})
     ks = results.get("ks", {})
     sc = results.get("schema", {})
 
     for name, is_fault, detail in [
-        ("zscore_detector.py",
+        ("zscore_detector",
          z.get("fault_detected", False),
          f"{z.get('flagged_events',0)} events with impossible vitals"
          if z.get("fault_detected") else "All vitals within baseline"),
-        ("ks_test.py",
+        ("ks_test",
          ks.get("drift_detected", False),
          f"Drift in: {drifted}" if drifted
          else "Distribution matches gold baseline"),
-        ("schema_entropy.py",
+        ("schema_entropy",
          sc.get("fault_detected", False),
          f"Missing: {list(sc.get('missing_fields',{}).keys())} | Extra: {list(sc.get('extra_fields',{}).keys())}"
          if sc.get("fault_detected") else "Schema matches ehr_v2"),
@@ -661,7 +670,7 @@ Fix: Agent alerting SRE team via Webhook
 
     # ── Agent log — scrollable ────────────────────────────────────
     if st.session_state.agent_log:
-        st.markdown("#### orchestrator.py output")
+        st.markdown("#### Orchestrator Output")
         st.caption("Actual terminal output — scrollable")
 
         log_lines = []

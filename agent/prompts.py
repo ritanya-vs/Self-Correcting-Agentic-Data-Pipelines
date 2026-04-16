@@ -127,7 +127,9 @@ If multiple columns are faulty → update ALL in ONE query
 ---
 
 10. VERIFICATION RULE:
-After each fix, assume anomalies may still exist
+After each fix, ONLY proceed if that fault exists in DETECT signals.
+DO NOT assume new faults.
+DO NOT execute tools for faults not present in DETECT.
 Only finish when ALL conditions are resolved
 
 ---
