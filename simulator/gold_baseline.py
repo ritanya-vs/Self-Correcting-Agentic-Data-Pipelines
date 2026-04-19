@@ -53,7 +53,6 @@ def capture_baseline(duration_minutes=5):
 
     consumer.close()
 
-    # Build stats
     baseline = {
         "captured_at":  datetime.utcnow().isoformat(),
         "event_count":  count,

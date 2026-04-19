@@ -16,10 +16,10 @@ NORMAL_RANGES = {
 }
 
 def generate_patient_event(anomalous=False):
-    """
-    Returns one patient vital signs event as a dict.
-    If anomalous=True, injects out-of-range values into ~30% of fields.
-    """
+    
+    #Returns one patient vital signs event as a dict.
+    #If anomalous=True, injects out-of-range values into ~30% of fields.
+
     def val(key):
         lo, hi = NORMAL_RANGES[key]
         if anomalous and random.random() < 0.3:

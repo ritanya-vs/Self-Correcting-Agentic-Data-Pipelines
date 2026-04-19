@@ -19,16 +19,16 @@ producer = Producer({"bootstrap.servers": KAFKA_BOOTSTRAP})
 def delivery_report(err, msg):
     if err: print(f"[ERROR] Delivery failed: {err}")
 
+#Converts event - JSON
 def _send(topic, event):
     producer.produce(topic, key=event.get("patient_id", "unknown"), value=json.dumps(event), callback=delivery_report)
     producer.poll(0)
 
 def write_fault_to_db(con, event):
-    """Dynamic DB writer explicitly built to force broken rows into Databricks."""
+    #Dynamic DB writer (into Databricks).
     try:
         cursor = con.cursor()
         
-        # THE MAGIC FIX: Tell the fault injector to wait in line!
         try:
             cursor.execute("PRAGMA busy_timeout = 10000") 
         except:
@@ -49,7 +49,6 @@ def write_fault_to_db(con, event):
 
         safe_event = {k: v for k, v in event.items() if k in valid_cols}
         
-        # CRITICAL: Force spo2 to be NULL so it shows up broken on your dashboard!
         if "spo2" in valid_cols and "spo2" not in safe_event:
             safe_event["spo2"] = None
 
@@ -64,13 +63,13 @@ def write_fault_to_db(con, event):
         con.commit()
         cursor.close()
     except Exception as e:
-        print(f"❌ [DB] {e}")
+        print(f"[DB] {e}")
 
 
-# ── Fault 1 ───────────────────────────────────────────────────────
+# Fault 1 
 def inject_schema_fault(n_events=20):
     print(f"[FAULT] SCHEMA — sending {n_events} fault events...")
-    con = get_connection() # Open ONE connection to speed up the loop!
+    con = get_connection() 
     
     for _ in range(n_events):
         event = generate_patient_event()
@@ -85,7 +84,7 @@ def inject_schema_fault(n_events=20):
     producer.flush()
     print("[FAULT] Schema fault done — written to Kafka AND Databricks.")
 
-# ── Fault 2 ───────────────────────────────────────────────────────
+# Fault 2
 def inject_data_quality_fault(n_events=20):
     print(f"[FAULT] DATA QUALITY — sending {n_events} physiologically impossible events...")
     con = get_connection() # Open the DB connection
@@ -97,7 +96,7 @@ def inject_data_quality_fault(n_events=20):
         event["bp_systolic"] = round(random.uniform(200, 280), 1)
         
         _send("ehr-stream", event)
-        write_fault_to_db(con, event) # Force it into Databricks!
+        write_fault_to_db(con, event) 
         time.sleep(0.2)
         
     con.close()
@@ -105,7 +104,7 @@ def inject_data_quality_fault(n_events=20):
     print("[FAULT] Data quality fault done.")
 
 
-# ── Fault 3 (UPDATED) ──────────────────────────────────────────────
+# Fault 3
 def inject_performance_fault(duration_seconds=30):
     print(f"[FAULT] PERFORMANCE — Executing heavy Cartesian join to choke Databricks...")
     
@@ -113,7 +112,7 @@ def inject_performance_fault(duration_seconds=30):
         try:
             con = get_connection()
             cursor = con.cursor()
-            # A massive cross join to max out warehouse compute
+    
             cursor.execute("""
                 SELECT COUNT(*)
                 FROM healthcare_db.ehr_stream a
@@ -125,11 +124,10 @@ def inject_performance_fault(duration_seconds=30):
         except Exception as e:
             print(f"[DB ERROR] {e}")
 
-    # 1. Fire off the heavy query in the background so it doesn't block the stream
     t = threading.Thread(target=heavy_query)
     t.start()
 
-    # 2. Continue normal event streaming
+    # normal event streaming
     print(f"[FAULT] Heavy query running. Continuing normal stream for {duration_seconds}s...")
     start = time.time()
     count = 0
@@ -140,8 +138,8 @@ def inject_performance_fault(duration_seconds=30):
         
     print(f"[FAULT] Performance fault stream done.")
 
-# ── Fault 4 ───────────────────────────────────────────────────────
-def inject_security_fault(n_events=50):
+# Fault 4 
+def inject_security_fault(n_events=10):
     print(f"[FAULT] SECURITY — sending {n_events} rapid events from same patient ID...")
     attacker_id = "PT-ATTACKER-0000"
     con = get_connection()
@@ -150,16 +148,15 @@ def inject_security_fault(n_events=50):
         event["patient_id"] = attacker_id
         _send("ehr-stream", event)
         write_fault_to_db(con, event)
-        time.sleep(0.05)   # very fast — 50 events in ~2.5 seconds
+        time.sleep(0.05)   #  50 events in ~2.5 seconds
     producer.flush()
     print("[FAULT] Security fault done.")
 
 
-# ── Fault 5 (UPDATED) ──────────────────────────────────────────────
+#  Fault 5 
 def inject_stall_fault(pause_seconds=45):
     print(f"[FAULT] STALL — Pausing Databricks Sink Connector for {pause_seconds}s...")
     
-    # 1. Pause the connector via Kafka Connect REST API
     try:
         requests.put("http://localhost:8083/connectors/databricks-sink/pause")
         print("[FAULT] Connector paused! Building up consumer lag...")
@@ -167,7 +164,7 @@ def inject_stall_fault(pause_seconds=45):
         print(f"[WARNING] Could not reach Kafka Connect REST API: {e}")
         print("[WARNING] Make sure your Databricks Sink connector is named 'databricks-sink' and running on port 8083.")
 
-    # 2. Continue producing events at a normal rate to build lag
+    # Continue producing events at a normal rate to build lag
     start = time.time()
     count = 0
     while time.time() - start < pause_seconds:
@@ -177,14 +174,13 @@ def inject_stall_fault(pause_seconds=45):
 
     print(f"[FAULT] Sent {count} events while stalled. Resuming connector...")
     
-    # 3. Resume the connector
     try:
         requests.put("http://localhost:8083/connectors/databricks-sink/resume")
         print("[FAULT] Connector resumed. Watch lag decrease in Kafka UI.")
     except Exception as e:
         print(f"[WARNING] Could not reach Kafka Connect REST API to resume: {e}")
 
-# ── CLI ────────────────────────────────────────────────────────────
+# CLI 
 FAULTS = {
     "schema":       inject_schema_fault,
     "data_quality": inject_data_quality_fault,

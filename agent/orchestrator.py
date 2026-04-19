@@ -15,15 +15,14 @@ from detectors.ks_test         import run_ks_test
 from detectors.schema_entropy  import check_batch as schema_batch
 
 KAFKA_BOOTSTRAP = "localhost:9092"
-WINDOW_SIZE     = 50   # how many events to read before running detectors
+WINDOW_SIZE     = 50  
 def consume_events(topic="ehr-stream", n=50, timeout_seconds=30) -> list:
-    """
-    Reads the LAST N events from Kafka by seeking to end-offset minus n.
-    This guarantees we always see the most recent events.
-    """
+    
+    #Reads the LAST N events from Kafka
+    
     from confluent_kafka import TopicPartition
 
-    # Step 1 — find current end offset
+    # find current end offset
     probe = Consumer({
         "bootstrap.servers": KAFKA_BOOTSTRAP,
         "group.id":          f"larf-probe-{int(time.time())}",
@@ -34,12 +33,11 @@ def consume_events(topic="ehr-stream", n=50, timeout_seconds=30) -> list:
     )
     probe.close()
 
-    # Step 2 — seek to (end - n)
+    # (end - n)
     start_offset = max(low, high - n)
     print(f"[ORCHESTRATOR] Topic has {high} total events. "
           f"Reading last {n} from offset {start_offset}...")
 
-    # Step 3 — consume from that offset
     consumer = Consumer({
         "bootstrap.servers":  KAFKA_BOOTSTRAP,
         "group.id":           f"larf-orchestrator-{int(time.time())}",
@@ -72,7 +70,7 @@ def consume_events(topic="ehr-stream", n=50, timeout_seconds=30) -> list:
     print(f"[ORCHESTRATOR] Collected {len(events)} events in "
           f"{round(time.time()-start, 1)}s")
 
-    # Debug — show how many look like fault events
+    # how many look like fault events
     fault_count = sum(1 for e in events if "spo2" not in e
                       or "diagnosis_code" in e
                       or float(e.get("heart_rate", 80)) > 200
@@ -82,10 +80,9 @@ def consume_events(topic="ehr-stream", n=50, timeout_seconds=30) -> list:
     return events
 
 def run_detectors(events: list) -> list:
-    """
-    Runs all 3 detectors on the event batch.
-    Returns a list of alert dicts for any faults found.
-    """
+    #Runs all 3 detectors on the event batch.
+    #Returns a list of alert dicts for any faults found.
+
     alerts = []
 
     if not events:
@@ -97,7 +94,7 @@ def run_detectors(events: list) -> list:
         })
         return alerts
 
-    # 1. Z-Score detector
+    # Z-Score detector
     zscore_result = zscore_batch(events)
     if zscore_result["fault_detected"]:
         print(f"[DETECT]  Z-Score anomaly — "
@@ -109,7 +106,7 @@ def run_detectors(events: list) -> list:
             "anomalous_fields": zscore_result["anomalous_fields"],
         })
 
-    # 2. KS-Test detector
+    # KS-Test detector
     ks_result = run_ks_test(events)
     if ks_result["drift_detected"]:
         drifted = [f for f, r in ks_result["fields"].items() if r["drifted"]]
@@ -121,7 +118,7 @@ def run_detectors(events: list) -> list:
             "fields":        ks_result["fields"],
         })
 
-    # 3. Schema entropy detector
+    # Schema entropy detector
     schema_result = schema_batch(events)
     if schema_result["fault_detected"]:
         print(f"[DETECT]  Schema anomaly — "
@@ -136,7 +133,7 @@ def run_detectors(events: list) -> list:
             "extra_fields":   schema_result["extra_fields"],
         })
 
-    # 4. SECURITY detector
+    # SECURITY detector
     attacker_events = [e for e in events if e.get("patient_id") == "PT-ATTACKER-0000"]
 
     if len(attacker_events) > 5:   # threshold (you can tune this)
@@ -154,18 +151,14 @@ def run_detectors(events: list) -> list:
     return alerts
 
 def run_ooda_cycle():
-    """
-    One full Observe → Orient → Decide → Act cycle.
-    """
+
     print("\n" + "="*55)
     print(" LARF OODA CYCLE STARTED")
     print("="*55 + "\n")
 
-    # ── OBSERVE ──────────────────────────────────────────
     print("[OBSERVE] Reading live events from Kafka...")
     events = consume_events(topic="ehr-stream", n=WINDOW_SIZE)
 
-    # ── ORIENT ───────────────────────────────────────────
     print("\n[ORIENT] Running all detectors...")
     alerts = run_detectors(events)
 
@@ -173,7 +166,6 @@ def run_ooda_cycle():
         print("\n No faults detected. Pipeline is healthy. Exiting.")
         return
 
-    # ── DECIDE ───────────────────────────────────────────
     print(f"\n[DECIDE] {len(alerts)} fault signal(s) detected. Building crisis packet...")
     builder = CrisisPacketBuilder()
     for alert in alerts:
@@ -187,7 +179,6 @@ def run_ooda_cycle():
     print("\n[DECIDE] Booting LLM agent...")
     agent = LARFReActAgent()
 
-    # ── ACT ───────────────────────────────────────────────
     print("\n[ACT] Agent taking control...\n")
     result = agent.resolve_crisis(crisis_packet)
 
@@ -199,10 +190,9 @@ def run_ooda_cycle():
         print(f"\nAgent Report:\n{result.get('output', 'No output')}")
 
 def run_continuous(interval_seconds=30):
-    """
-    Runs OODA cycles continuously — one every N seconds.
-    This is the real production mode.
-    """
+    
+    #Runs OODA cycles continuously — one every N seconds.
+  
     print(f"[LARF] Starting continuous monitoring (cycle every {interval_seconds}s)")
     print("[LARF] Press Ctrl+C to stop\n")
 

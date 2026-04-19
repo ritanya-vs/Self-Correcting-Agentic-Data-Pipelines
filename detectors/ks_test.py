@@ -8,7 +8,7 @@ BASELINE_FILE = os.path.join(
     os.path.dirname(__file__), "..", "simulator", "baselines", "ehr_baseline.json"
 )
 
-PVALUE_THRESHOLD = 0.0001   # if p < 0.05, distributions are significantly different
+PVALUE_THRESHOLD = 0.0001  
 
 def load_baseline() -> dict:
     with open(BASELINE_FILE, "r") as f:

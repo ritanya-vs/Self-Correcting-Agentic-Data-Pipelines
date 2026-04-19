@@ -45,7 +45,7 @@ class MultivariateDetector:
         self.model.fit(X)
         predictions = self.model.predict(X)
         
-        # We also get the anomaly scores (lower/more negative means more anomalous)
+        # get the anomaly scores (lower/more negative means more anomalous)
         scores = self.model.decision_function(X)
 
         latest_prediction = predictions[-1]

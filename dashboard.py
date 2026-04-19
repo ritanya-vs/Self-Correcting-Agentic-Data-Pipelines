@@ -8,8 +8,11 @@ import threading
 import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timezone
+import plotly.io as pio
 
-# ─── UNIVERSAL PATH FIX ───────────────────────────────────────────
+# Global dark theme for all plots
+pio.templates.default = "plotly_dark"
+
 _dash_dir = os.path.dirname(os.path.abspath(__file__))
 if os.path.basename(_dash_dir) == "dashboard":
     _proj_root = os.path.dirname(_dash_dir)
@@ -18,7 +21,6 @@ else:
 
 if _proj_root not in sys.path:
     sys.path.insert(0, _proj_root)
-# ──────────────────────────────────────────────────────────────────
 
 from simulator.patient_generator  import generate_patient_event
 from simulator.database           import get_connection
@@ -39,6 +41,7 @@ st.set_page_config(
     layout="wide"
 )
 
+
 st.markdown("""
 <style>
 .block-container{padding-top:1rem}
@@ -48,10 +51,23 @@ st.markdown("""
   border-radius:20px;font-weight:600;font-size:15px;display:inline-block}
 .status-fixed{background:#cce5ff;color:#004085;padding:8px 20px;
   border-radius:20px;font-weight:600;font-size:15px;display:inline-block}
-.fault-box{background:#fff3cd;border:1px solid #ffc107;
-  border-radius:8px;padding:12px;margin:8px 0}
-.fix-box{background:#d4edda;border:1px solid #28a745;
-  border-radius:8px;padding:12px;margin:8px 0}
+.fault-box{
+  background:#fff3cd;
+  border:1px solid #ffc107;
+  border-radius:8px;
+  padding:12px;
+  margin:8px 0;
+  color:#000000;   
+}
+.fix-box{
+  background:#d4edda;
+  border:1px solid #28a745;
+  border-radius:10px;
+  padding:14px;
+  margin:10px 0;
+  color:#000000;   /* ← makes text black */
+  font-weight:500; /* optional: improves visibility */
+}
 .agent-log-scroll {
   height: 300px;
   overflow-y: auto;
@@ -85,7 +101,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── Session state ─────────────────────────────────────────────────
+#  Session state 
 for key, default in [
     ("pipeline_state",    "idle"),
     ("events",            []),
@@ -100,7 +116,7 @@ for key, default in [
     if key not in st.session_state:
         st.session_state[key] = default
 
-# ── Helpers ───────────────────────────────────────────────────────
+#  Helpers 
 def fetch_db_events(limit=100):
     try:
         con    = get_connection()
@@ -222,7 +238,7 @@ def get_kafka_total_count():
     except:
         return 0
 
-# ── Auto-refresh logic ────────────────────────────────────────────
+# Auto-refresh logic 
 if st.session_state.auto_refresh:
     now = time.time()
     if now - st.session_state.last_refresh > 5:
@@ -234,7 +250,7 @@ if st.session_state.auto_refresh:
         time.sleep(0.1)
         st.rerun()
 
-# ── Header ────────────────────────────────────────────────────────
+# Header 
 h1, h2, h3 = st.columns([3, 2, 2])
 with h1:
     st.markdown("## LARF Pipeline Monitor")
@@ -255,7 +271,7 @@ with h3:
 
 st.divider()
 
-# ── OODA Loop status ──────────────────────────────────────────────
+# OODA Loop status 
 st.markdown("##### OODA Loop status")
 o1, o2, o3, o4 = st.columns(4)
 steps = [
@@ -280,7 +296,6 @@ for col, label, sub in steps:
 
 st.divider()
 
-# ── Control Panel ─────────────────────────────────────────────────
 st.markdown("### Control Panel")
 
 c1, c2, c3, c4, c5, c6, c7, c8 = st.columns(8)
@@ -417,7 +432,7 @@ agent.resolve_crisis(packet)
                 with open(temp_script_path, "w", encoding="utf-8") as f:
                     f.write(script_code)
 
-                # Execute exactly like orchestrator (No custom environments!)
+                
                 result = subprocess.run(
                     [sys.executable, temp_script_path],
                     capture_output=True,
@@ -425,7 +440,7 @@ agent.resolve_crisis(packet)
                     cwd=_proj_root
                 )
                 
-                # Clean up the file immediately
+               
                 if os.path.exists(temp_script_path):
                     os.remove(temp_script_path)
                 
@@ -487,6 +502,65 @@ m4.metric("Schema errors",     schema_f,
           delta=f"+{schema_f}" if schema_f else None, delta_color="inverse")
 m5.metric("Attacker events",   attacker,
           delta=f"+{attacker}" if attacker else None, delta_color="inverse")
+
+# ── System health gauge ─────────────────────────
+st.markdown("#### System health score")
+
+health_score = 100
+health_score -= flaggedZ * 2
+health_score -= len(drifted) * 5
+health_score -= schema_f * 3
+
+health_score = max(0, min(100, health_score))
+
+fig_gauge = go.Figure(go.Indicator(
+    mode="gauge+number",
+    value=health_score,
+    title={"text": "Pipeline Health"},
+    gauge={
+        "axis": {"range": [0, 100]},
+        "bar": {"color": "#00cc96"},
+        "steps": [
+            {"range": [0, 40], "color": "#3b0a0a"},
+            {"range": [40, 70], "color": "#3b2f0a"},
+            {"range": [70, 100], "color": "#0a3b1e"},
+        ],
+    },
+))
+
+fig_gauge.update_layout(height=250)
+
+st.plotly_chart(fig_gauge, use_container_width=True)
+
+# ── Event throughput over time ─────────────────────────
+st.markdown("#### Event throughput")
+
+current_count = len(events)
+st.session_state.event_count_history.append({
+    "time": datetime.now(),
+    "count": current_count
+})
+
+hist_df = pd.DataFrame(st.session_state.event_count_history)
+
+if len(hist_df) > 1:
+    fig_tp = go.Figure()
+    fig_tp.add_trace(go.Scatter(
+        x=hist_df["time"],
+        y=hist_df["count"],
+        mode="lines+markers",
+        name="Event count"
+    ))
+
+    fig_tp.update_layout(
+        height=250,
+        margin=dict(l=0, r=0, t=20, b=0),
+        xaxis_title="Time",
+        yaxis_title="Events",
+        font=dict(color="#EAEAEA"),
+    )
+
+    st.plotly_chart(fig_tp, use_container_width=True)
 
 st.divider()
 
@@ -567,9 +641,9 @@ with left:
             return "background-color:#f8d7da;color:#721c24;font-weight:600"
         return ""
 
-    styled_df = display_df.style.applymap(
-        lambda v: highlight_cell(v, "spo2")
-    )
+    styled_df = display_df.style.apply(
+    highlight, axis=1
+)
 
     st.dataframe(
         styled_df,
@@ -584,16 +658,19 @@ with left:
         color = "#E24B4A" if fault_type == "data_quality" else "#1D9E75"
         fig = go.Figure()
         fig.add_trace(go.Histogram(
-            x=hr_vals, nbinsx=25,
-            marker_color=color, name="Incoming events"
-        ))
+        x=hr_vals,
+        nbinsx=25,
+        marker=dict(color=color, line=dict(width=0)),
+        opacity=0.85,
+        name="Incoming events"
+    ))
         fig.add_vline(
             x=80.91, line_dash="dash", line_color="#185FA5",
             annotation_text="Baseline mean 80.9 BPM"
         )
         fig.update_layout(
             height=240, margin=dict(l=0,r=0,t=20,b=0),
-            plot_bgcolor="white", paper_bgcolor="white",
+            #plot_bgcolor="white", paper_bgcolor="white",
             xaxis_title="BPM", yaxis_title="Count"
         )
         st.plotly_chart(fig, use_container_width=True)
@@ -679,47 +756,47 @@ Fix: Agent alerting SRE team via Webhook
             if not line:
                 continue
             if "[OBSERVE]" in line:
-                log_lines.append(f"🔵 {line}")
+                log_lines.append(f"{line}")
             elif "[ORIENT]" in line or "[DETECT]" in line:
-                log_lines.append(f"🟡 {line}")
+                log_lines.append(f"{line}")
             elif "[DECIDE]" in line:
-                log_lines.append(f"🟠 {line}")
+                log_lines.append(f"{line}")
             elif "[ACT]" in line or "[AGENT]" in line:
-                log_lines.append(f"🔴 {line}")
+                log_lines.append(f"{line}")
             elif "SUCCESS" in line:
-                log_lines.append(f"✅ {line}")
+                log_lines.append(f"{line}")
             elif "ERROR" in line or "FAILED" in line:
-                log_lines.append(f"❌ {line}")
+                log_lines.append(f"{line}")
             elif "Final Answer" in line:
-                log_lines.append(f"📋 {line}")
+                log_lines.append(f"{line}")
             else:
                 log_lines.append(line)
 
         log_text = "\n".join(log_lines)
 
         st.components.v1.html(
-            f"""
-            <div style="
-                height: 300px;
-                overflow-y: auto;
-                background: #1e1e1e;
-                color: #d4d4d4;
-                font-family: 'Courier New', monospace;
-                font-size: 12px;
-                padding: 12px;
-                border-radius: 8px;
-                border: 1px solid #555;
-                white-space: pre-wrap;
-                word-wrap: break-word;
-                line-height: 1.5;
-            ">{log_text}</div>
-            <script>
-                var div = document.querySelector('div');
-                if(div) div.scrollTop = div.scrollHeight;
-            </script>
-            """,
-            height=320,
-        )
+        f"""
+        <div style="
+            height: 320px;
+            overflow-y: auto;
+            background: #0e1117;
+            color: #e6edf3;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            padding: 14px;
+            border-radius: 10px;
+            border: 1px solid #30363d;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        ">{log_text}</div>
+
+        <script>
+            var div = document.querySelector('div');
+            if(div) div.scrollTop = div.scrollHeight;
+        </script>
+        """,
+        height=340,
+    )
 
         if st.session_state.pipeline_state == "fixed":
             st.markdown("""
@@ -743,14 +820,14 @@ if fault_type in ("data_quality", "schema") and events:
             fig2 = go.Figure()
             fig2.add_trace(go.Histogram(
                 x=spo2_vals, nbinsx=15,
-                marker_color="#E24B4A", name="Incoming SpO2"
+                marker=dict(color="#E24B4A", line=dict(width=0)), opacity=0.85
             ))
             fig2.add_vline(x=97.6, line_dash="dash", line_color="#185FA5",
                            annotation_text="Baseline 97.6%")
             fig2.update_layout(
                 title="SpO2 distribution",
                 height=220, margin=dict(l=0,r=0,t=30,b=0),
-                plot_bgcolor="white", paper_bgcolor="white"
+                #plot_bgcolor="white", paper_bgcolor="white"
             )
             st.plotly_chart(fig2, use_container_width=True)
         else:
@@ -763,13 +840,13 @@ if fault_type in ("data_quality", "schema") and events:
             fig3 = go.Figure()
             fig3.add_trace(go.Histogram(
                 x=bp_vals, nbinsx=15,
-                marker_color=color, name="Incoming BP"
+                marker=dict(color=color, line=dict(width=0)), opacity=0.85
             ))
             fig3.add_vline(x=114.3, line_dash="dash", line_color="#185FA5",
                            annotation_text="Baseline 114.3 mmHg")
             fig3.update_layout(
                 title="BP Systolic distribution",
                 height=220, margin=dict(l=0,r=0,t=30,b=0),
-                plot_bgcolor="white", paper_bgcolor="white"
+                #plot_bgcolor="white", paper_bgcolor="white"
             )
             st.plotly_chart(fig3, use_container_width=True)

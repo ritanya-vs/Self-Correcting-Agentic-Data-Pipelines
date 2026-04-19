@@ -16,14 +16,14 @@ producer = Producer({"bootstrap.servers": KAFKA_BOOTSTRAP})
 db_queue = queue.Queue()
 
 def delivery_report(err, msg):
-    if err: print(f"❌ [KAFKA ERROR] {err}")
+    if err: print(f"[KAFKA ERROR] {err}")
 
 def db_worker():
     """Background thread that uses ONE continuous connection to Databricks."""
-    print("🟢 [DB WORKER] Connecting to Databricks...")
+    print("[DB WORKER] Connecting to Databricks...")
     con = get_connection()
     cursor = con.cursor()
-    print("🟢 [DB WORKER] Connected. Listening for events in the background...")
+    print("[DB WORKER] Connected. Listening for events in the background...")
     
     while True:
         event = db_queue.get()
@@ -60,7 +60,7 @@ def db_worker():
             
             con.commit()
         except Exception as e:
-            print(f"❌ [DB ERROR] {e}")
+            print(f"[DB ERROR] {e}")
         finally:
             db_queue.task_done()
             
@@ -73,14 +73,14 @@ def main():
     parser.add_argument("--interval", type=float, default=1.0)
     args = parser.parse_args()
 
-    # Start the background DB worker
+    # Starting the background DB worker
     worker_thread = threading.Thread(target=db_worker, daemon=True)
     worker_thread.start()
 
     start_time = time.time()
     count = 0
     
-    print(f"\n🚀 Starting LARF Dual-Producer (Micro-Batched)")
+    print(f"\nStarting LARF Dual-Producer (Micro-Batched)")
     while time.time() - start_time < args.duration:
         event = generate_patient_event(anomalous=False)
         
@@ -92,15 +92,15 @@ def main():
         db_queue.put(event)
         
         count += 1
-        print(f"✅ [{count}] Sent patient -> Kafka & DB Queue")
+        print(f"[{count}] Sent patient -> Kafka & DB Queue")
         time.sleep(args.interval)
         
-    print("⏳ Timer finished! Waiting for the DB Worker to flush final rows to Databricks...")
+    print("Timer finished! Waiting for the DB Worker to flush final rows to Databricks...")
     db_queue.join() 
     db_queue.put(None) 
     worker_thread.join()
     producer.flush()
-    print(f"🎉 Stream Complete! Exactly {count} events generated and saved.")
+    print(f"Stream Complete! Exactly {count} events generated and saved.")
 
 if __name__ == "__main__":
     main()
