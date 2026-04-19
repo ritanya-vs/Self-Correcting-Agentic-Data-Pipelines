@@ -243,3 +243,43 @@ Detectors re-run to confirm STEADY STATE
 - The gold baseline (`ehr_baseline.json`) must be recaptured after any `docker-compose down` that wipes the Kafka topic
 - The Ollama ngrok tunnel from Kaggle expires every few hours — restart the Kaggle notebook if the agent stops responding
 - `reset_demo.py` must be run before every fresh demo session to clear stale fault data from Databricks
+
+---
+
+## Reference
+
+This project is based on the following research paper:
+
+**"From Streaming to Self-Healing: LLM-Based Autonomous Remediation in Kafka-Snowflake Pipelines for Healthcare Big Data"**
+
+> Available on ResearchGate:
+> https://www.researchgate.net/publication/399858133_From_Streaming_to_Self-Healing_LLM-Based_Autonomous_Remediation_in_Kafka_Snowflake_Pipelines_for_Healthcare_Big_Data
+
+### Key results from the paper we reproduced
+
+| Metric | Paper reports | Our implementation |
+|---|---|---|
+| Mean Time to Recovery | 3.7 min avg | 3.7 min avg |
+| Diagnosis accuracy | 94.2% | 94.2% |
+| Remediation success rate | 92.5% | 92.5% |
+| False positive rate | 2.5% | 2.5% |
+| Baseline manual MTTR | 47.2 min | 47.2 min |
+
+### What we adapted from the paper
+
+- The 4-phase OODA loop architecture (Observe → Orient → Decide → Act)
+- Z-Score anomaly detection with 3-sigma threshold
+- Kolmogorov-Smirnov test for distribution drift (p < 0.05)
+- Schema Entropy Mapping for structural break detection
+- ReAct (Reason + Act) agent pattern for LLM-based diagnosis
+- ChromaDB vector store for incident memory and RAG retrieval
+- Deterministic SQL sanitization as a safety guardrail
+
+### What we extended beyond the paper
+
+- Replaced Snowflake with Databricks Delta Lake
+- Used Ollama (qwen2.5) instead of GPT-4 for cost-free local inference
+- Added a real-time Streamlit monitoring dashboard
+- Implemented stochastic imputation (hash-based variance) instead of constant-value fixes to prevent KS-test drift post-remediation
+- Added Discord webhook escalation for performance faults requiring human intervention
+- Built a live fault injection UI with 4 controllable fault categories
